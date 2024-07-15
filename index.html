@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Task App</title>
+  <!-- Include Bootstrap CSS -->
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Include Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <!-- Include Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #f8f9fa;
+      color: #343a40;
+    }
+    .container {
+      max-width: 800px;
+      margin-top: 50px;
+      background-color: #fff;
+      padding: 30px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+    }
+    .btn-primary {
+      background-color: #007bff;
+      border-color: #007bff;
+    }
+    .btn-primary:hover {
+      background-color: #0056b3;
+      border-color: #004085;
+    }
+    .table thead {
+      background-color: #343a40;
+      color: #fff;
+    }
+    .edit-btn {
+      color: #28a745;
+      cursor: pointer;
+    }
+    .delete-btn {
+      color: #dc3545;
+      cursor: pointer;
+    }
+    .form-control:focus {
+      border-color: #007bff;
+      box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2 class="mb-4">Task Manager</h2>
+    <form id="taskform" class="my-4" onsubmit="return false;">
+      <div class="form-group">
+        <input type="text" id="taskname" class="form-control mb-2" placeholder="Task title.." required />
+      </div>
+      <div class="form-group">
+        <textarea id="taskdescription" class="form-control mb-2" placeholder="Description ..." required></textarea>
+      </div>
+      <label>Start date & Start time</label>
+      <div class="form-row mb-2">
+        <div class="col">
+          <input type="date" id="startdate" class="form-control" placeholder="Start date" required />
+        </div>
+        <div class="col">
+          <input type="time" id="starttime" class="form-control">
+        </div>
+      </div>
+      <label>End date & End time</label>
+      <div class="form-row mb-2">
+        <div class="col">
+          <input type="date" id="enddate" class="form-control" placeholder="End date" />
+        </div>
+        <div class="col">
+          <input type="time" id="endtime" class="form-control">
+        </div>
+      </div>
+      <label>Complete</label>
+      <select id="complete" class="form-control mb-2">
+        <option value="false">False</option>
+        <option value="true">True</option>
+      </select>
+      <input type="button" id="submit" class="btn btn-primary" onclick="submitTask()" value="Create Task" />
+    </form>
+
+    <h3>Pending Tasks</h3>
+    <table id="table" class="table table-bordered">
+      <thead class="thead-dark">
+        <tr>
+          <th>TASK NAME</th>
+          <th>DESCRIPTION</th>
+          <th>START DATE</th>
+          <th>START TIME</th>
+          <th>END DATE</th>
+          <th>END TIME</th>
+          <th>COMPLETE</th>
+          <th>ACTIONS</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Table rows will be added here -->
+      </tbody>
+    </table>
+
+    <h3>Completed Tasks</h3>
+    <table id="completedTable" class="table table-bordered">
+      <thead class="thead-dark">
+        <tr>
+          <th>TASK NAME</th>
+          <th>DESCRIPTION</th>
+          <th>START DATE</th>
+          <th>START TIME</th>
+          <th>END DATE</th>
+          <th>END TIME</th>
+          <th>COMPLETE</th>
+          <th>ACTIONS</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Completed table rows will be added here -->
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    let editIndex = -1;
+    let originalTask = null;
+    let currentTable = '';
+
+    function submitTask() {
+      if (!validateForm()) {
+        return;
+      }
+
+      if (editIndex === -1) {
+        addRow();
+      } else {
+        updateRow();
+      }
+    }
+
+    function validateForm() {
+      const taskName = document.getElementById("taskname").value;
+      const taskDescription = document.getElementById("taskdescription").value;
+      const startDate = document.getElementById("startdate").value;
+
+      if (!taskName || !taskDescription || !startDate) {
+        alert("Please fill out all required fields.");
+        return false;
+      }
+
+      return true;
+    }
+
+    function addRow() {
+      "use strict";
+
+      const taskName = document.getElementById("taskname").value;
+      const taskDescription = document.getElementById("taskdescription").value;
+      const startDate = document.getElementById("startdate").value;
+      const startTime = document.getElementById("starttime").value;
+      const endDate = document.getElementById("enddate").value;
+      const endTime = document.getElementById("endtime").value;
+      const complete = document.getElementById("complete").value;
+
+      // Save the task to local storage
+      saveTaskToLocalStorage(taskName, taskDescription, startDate, startTime, endDate, endTime, complete);
+
+      // Clear the form
+      document.getElementById("taskform").reset();
+
+      // Load tasks again to sort and display
+      loadTasksFromLocalStorage();
+    }
+
+    function saveTaskToLocalStorage(taskName, taskDescription, startDate, startTime, endDate, endTime, complete) {
+      if (typeof(Storage) !== "undefined") {
+        let tasks = localStorage.getItem('tasks') || '';
+        tasks += `${taskName}|${taskDescription}|${startDate}|${startTime}|${endDate}|${endTime}|${complete};`;
+        localStorage.setItem('tasks', tasks);
+      } else {
+        console.log("Sorry, your browser does not support Web Storage...");
+      }
+    }
+
+    function loadTasksFromLocalStorage() {
+      if (typeof(Storage) !== "undefined") {
+        const tasks = localStorage.getItem('tasks') || '';
+        const taskArray = tasks.split(';').filter(task => task).map(task => task.split('|'));
+
+        // Sort tasks by end date and end time
+        taskArray.sort((a, b) => {
+          const endA = new Date(`${a[4]}T${a[5]}`);
+          const endB = new Date(`${b[4]}T${b[5]}`);
+          return endA - endB;
+        });
+
+        const tableBody = document.getElementById("table").getElementsByTagName('tbody')[0];
+        const completedTableBody = document.getElementById("completedTable").getElementsByTagName('tbody')[0];
+        tableBody.innerHTML = '';
+        completedTableBody.innerHTML = '';
+        taskArray.forEach(function(task) {
+          if (task[6] === "true") {
+            appendRowToTable(task, completedTableBody);
+          } else {
+            appendRowToTable(task, tableBody);
+          }
+        });
+      } else {
+        console.log("Sorry, your browser does not support Web Storage...");
+      }
+    }
+
+    function appendRowToTable(task, tableBody) {
+      const row = document.createElement("tr");
+
+      const td1 = document.createElement("td");
+      const td2 = document.createElement("td");
+      const td3 = document.createElement("td");
+      const td4 = document.createElement("td");
+      const td5 = document.createElement("td");
+      const td6 = document.createElement("td");
+      const td7 = document.createElement("td");
+      const td8 = document.createElement("td");
+
+      td1.innerHTML = task[0];
+      td2.innerHTML = task[1];
+      td3.innerHTML = task[2];
+      td4.innerHTML = task[3];
+      td5.innerHTML = task[4];
+      td6.innerHTML = task[5];
+      td7.innerHTML = task[6];
+      td8.innerHTML = '<i class="fas fa-edit edit-btn mr-2" onclick="editRow(this)"></i><i class="fas fa-trash delete-btn" onclick="deleteRow(this)"></i>';
+
+      row.appendChild(td1);
+      row.appendChild(td2);
+      row.appendChild(td3);
+      row.appendChild(td4);
+      row.appendChild(td5);
+      row.appendChild(td6);
+      row.appendChild(td7);
+      row.appendChild(td8);
+
+      tableBody.appendChild(row);
+    }
+
+    function deleteRow(element) {
+      const row = element.parentElement.parentElement;
+      const index = Array.from(row.parentElement.children).indexOf(row);
+
+      let tasks = localStorage.getItem('tasks') || '';
+      tasks = tasks.split(';');
+      tasks.splice(index, 1);
+      localStorage.setItem('tasks', tasks.join(';'));
+
+      row.remove();
+    }
+
+    function editRow(element) {
+      const row = element.parentElement.parentElement;
+      const tableBody = row.parentElement;
+      currentTable = tableBody.parentElement.id;
+      editIndex = Array.from(tableBody.children).indexOf(row);
+
+      const tasks = localStorage.getItem('tasks') || '';
+      const taskArray = tasks.split(';').filter(task => task).map(task => task.split('|'));
+
+      const task = taskArray.filter(task => (currentTable === 'completedTable' && task[6] === "true") || (currentTable === 'table' && task[6] === "false"))[editIndex];
+
+      document.getElementById("taskname").value = task[0];
+      document.getElementById("taskdescription").value = task[1];
+      document.getElementById("startdate").value = task[2];
+      document.getElementById("starttime").value = task[3];
+      document.getElementById("enddate").value = task[4];
+      document.getElementById("endtime").value = task[5];
+      document.getElementById("complete").value = task[6];
+
+      originalTask = task.join('|');
+
+      document.getElementById("submit").value = "Update Task";
+    }
+
+    function updateRow() {
+      const taskName = document.getElementById("taskname").value;
+      const taskDescription = document.getElementById("taskdescription").value;
+      const startDate = document.getElementById("startdate").value;
+      const startTime = document.getElementById("starttime").value;
+      const endDate = document.getElementById("enddate").value;
+      const endTime = document.getElementById("endtime").value;
+      const complete = document.getElementById("complete").value;
+
+      let tasks = localStorage.getItem('tasks') || '';
+      tasks = tasks.split(';');
+      const updatedTask = `${taskName}|${taskDescription}|${startDate}|${startTime}|${endDate}|${endTime}|${complete}`;
+
+      // Only update if the task details have changed
+      if (originalTask !== updatedTask) {
+        const taskArray = tasks.filter(task => task).map(task => task.split('|'));
+        const task = taskArray.filter(task => (currentTable === 'completedTable' && task[6] === "true") || (currentTable === 'table' && task[6] === "false"))[editIndex];
+        const taskIndex = taskArray.findIndex(t => t.join('|') === task.join('|'));
+        tasks[taskIndex] = updatedTask;
+        localStorage.setItem('tasks', tasks.join(';'));
+
+        // Load tasks again to sort and display
+        loadTasksFromLocalStorage();
+      }
+
+      document.getElementById("submit").value = "Create Task";
+      document.getElementById("taskform").reset();
+      editIndex = -1;
+      originalTask = null;
+    }
+
+    document.addEventListener('DOMContentLoaded', loadTasksFromLocalStorage);
+  </script>
+  <!-- Include Bootstrap JS and dependencies -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+</body>
+</html>
